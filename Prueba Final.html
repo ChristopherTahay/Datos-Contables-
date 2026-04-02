@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema Contable</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink:     #111111;
+  --ink2:    #444444;
+  --ink3:    #888888;
+  --line:    #cccccc;
+  --line2:   #eeeeee;
+  --bg:      #ffffff;
+  --bg2:     #f5f5f5;
+  --accent:  #2255cc;
+  --acc-lt:  #eaf0ff;
+  --acc-brd: #aabbee;
+  --ok:      #116633;
+  --ok-lt:   #eafaf0;
+  --ok-brd:  #88ccaa;
+  --warn:    #885500;
+  --warn-lt: #fffbea;
+  --warn-brd:#ddaa44;
+  --err:     #cc2222;
+  --err-lt:  #fff0f0;
+  --err-brd: #ffaaaa;
+  --r:       0px;
+  --r-lg:    0px;
+  --mono:    'IBM Plex Mono', monospace;
+  --sans:    'IBM Plex Sans', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; }
+body { font-family: var(--sans); background: #eeeeee; color: var(--ink); min-height: 100vh; }
+
+/* LAYOUT */
+.wrap { max-width: 800px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+
+/* HEADER */
+.site-header {
+  background: #2255cc; color: #fff;
+  padding: 1rem 1.25rem; margin-bottom: 1.5rem;
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;
+  border: 2px solid #1a3fa0;
+}
+.header-text h1 { font-size: 1.2rem; font-weight: 600; color: #fff; }
+.header-text p  { font-size: .78rem; color: rgba(255,255,255,.75); margin-top: 3px; }
+.header-actions { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+
+/* BUTTONS */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; font-size: .82rem; font-weight: 500; font-family: var(--sans);
+  border-radius: 0; cursor: pointer; transition: opacity .1s; border: 2px solid;
+  white-space: nowrap;
+}
+.btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+.btn-ghost   { background: #fff; border-color: #fff; color: #2255cc; }
+.btn-ghost:hover { background: #eaf0ff; }
+.btn-primary { background: #fff; border-color: #2255cc; color: #2255cc; }
+.btn-primary:hover { background: #eaf0ff; }
+.btn-ok      { background: var(--ok-lt); border-color: var(--ok-brd); color: var(--ok); }
+.btn-ok:hover { background: #d0f0e0; }
+.btn-full    { width: 100%; justify-content: center; padding: 10px; font-size: .9rem; }
+.btn-sm      { padding: 3px 10px; font-size: .75rem; }
+.btn-danger  { background: var(--err-lt); border-color: var(--err-brd); color: var(--err); }
+.btn-danger:hover { background: #ffe0e0; }
+.btn-x {
+  background: #fff; border: 2px solid #cccccc; color: #888;
+  cursor: pointer; font-size: .75rem; padding: 2px 8px; font-family: var(--sans);
+}
+.btn-x:hover { border-color: var(--err); color: var(--err); background: var(--err-lt); }
+
+/* TABS */
+.tabs {
+  display: flex; gap: 0; background: #fff;
+  margin-bottom: 1.25rem; overflow-x: auto;
+  border: 2px solid #cccccc; border-bottom: none;
+}
+.tab {
+  flex: 1; min-width: 80px; padding: 10px 14px; font-size: .82rem; font-weight: 500;
+  font-family: var(--sans); border: none; border-right: 2px solid #cccccc;
+  background: #f0f0f0; color: #666; cursor: pointer; white-space: nowrap; text-align: center;
+}
+.tab:last-child { border-right: none; }
+.tab.active { background: #2255cc; color: #fff; font-weight: 600; }
+.tab:hover:not(.active) { background: #e0e0e0; color: #111; }
+
+/* PANELS */
+.panel { display: none; } .panel.active { display: block; }
+
+/* CARDS */
+.card {
+  background: #fff; border: 2px solid #cccccc;
+  padding: 1.25rem; margin-bottom: 1rem;
+}
+.card-title {
+  font-size: .72rem; font-weight: 600; color: #888; text-transform: uppercase;
+  letter-spacing: .08em; margin-bottom: 1rem;
+  padding-bottom: .5rem; border-bottom: 1px solid #eee;
+}
+
+/* FORM */
+.form-row   { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+.form-group { margin-bottom: .875rem; }
+.form-group:last-child { margin-bottom: 0; }
+label { display: block; font-size: .78rem; font-weight: 600; color: #444; margin-bottom: 5px; }
+input[type=text], input[type=number], select, textarea {
+  width: 100%; padding: 8px 10px; font-size: .875rem; font-family: var(--sans);
+  border: 2px solid #ccc; border-radius: 0;
+  background: #fff; color: #111; transition: border-color .1s;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none; border-color: #2255cc;
+}
+.field-hint { font-size: .72rem; color: #888; margin-top: 4px; }
+
+/* INFO BOX */
+.info-row {
+  display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+  font-size: .82rem; margin-bottom: .875rem; font-weight: 500; border: 2px solid;
+}
+.info-debe  { background: var(--acc-lt); border-color: var(--acc-brd); color: var(--accent); }
+.info-haber { background: var(--warn-lt); border-color: var(--warn-brd); color: var(--warn); }
+
+/* BADGES */
+.badge { display: inline-block; padding: 2px 7px; font-size: .7rem; font-weight: 600; border: 1px solid; }
+.b-activo  { background: #eaf0ff; color: #2255cc; border-color: #aabbee; }
+.b-pasivo  { background: #fff4e6; color: #885500; border-color: #ddaa44; }
+.b-capital { background: #f3f0ff; color: #5b21b6; border-color: #c4b5fd; }
+.b-ingreso { background: #eafaf0; color: #116633; border-color: #88ccaa; }
+.b-gasto   { background: #fff0f0; color: #cc2222; border-color: #ffaaaa; }
+.badge-nueva { background: #eafaf0; color: #116633; border: 1px solid #88ccaa; margin-left: 5px; font-size: .65rem; padding: 1px 5px; font-weight: 600; }
+
+/* ALERT */
+.alert {
+  padding: 10px 14px; font-size: .82rem;
+  font-weight: 600; margin-bottom: 1rem; border: 2px solid; display: none;
+}
+.alert.show { display: block; }
+.alert-ok   { background: var(--ok-lt);   border-color: var(--ok-brd);   color: var(--ok); }
+.alert-err  { background: var(--err-lt);  border-color: var(--err-brd);  color: var(--err); }
+.alert-warn { background: var(--warn-lt); border-color: var(--warn-brd); color: var(--warn); }
+
+/* TABLE */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .83rem; }
+th {
+  padding: 9px 12px; text-align: left; font-size: .72rem; font-weight: 600; color: #fff;
+  text-transform: uppercase; letter-spacing: .05em;
+  background: #333; white-space: nowrap; border-right: 1px solid #555;
+}
+th:last-child { border-right: none; }
+td { padding: 9px 12px; border-bottom: 1px solid #e0e0e0; border-right: 1px solid #e0e0e0; vertical-align: middle; }
+td:last-child { border-right: none; }
+tr:hover td { background: #f8f8ff; }
+tr.total-row:hover td { background: #f0f0f0; }
+.num { text-align: right; font-family: var(--mono); font-size: .8rem; }
+.total-row td {
+  font-weight: 600; background: #f0f0f0; border-top: 2px solid #ccc;
+  font-family: var(--mono);
+}
+.edited { color: #2255cc; font-weight: 600; }
+
+/* METRICS */
+.metrics { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: .75rem; margin-bottom: 1rem; }
+.metric {
+  background: #fff; border: 2px solid #ccc; padding: 1rem;
+}
+.metric-label { font-size: .68rem; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+.metric-val   { font-size: 1.05rem; font-weight: 600; color: #111; font-family: var(--mono); }
+
+/* CUADRE */
+.cuadre {
+  padding: 10px 14px; font-size: .82rem;
+  font-weight: 600; text-align: center; margin-bottom: 1rem; border: 2px solid;
+}
+.cuadre-ok   { background: var(--ok-lt);   border-color: var(--ok);   color: var(--ok); }
+.cuadre-warn { background: var(--warn-lt); border-color: var(--warn); color: var(--warn); }
+.cuadre-err  { background: var(--err-lt);  border-color: var(--err);  color: var(--err); }
+
+/* FILTROS */
+.filter-row  { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: .875rem; }
+.filter-chip {
+  padding: 5px 12px; font-size: .75rem; font-weight: 600; border: 2px solid #ccc;
+  background: #fff; color: #666; cursor: pointer;
+}
+.filter-chip:hover { border-color: #2255cc; color: #2255cc; }
+.filter-chip.on { background: #2255cc; border-color: #2255cc; color: #fff; }
+
+/* QUICK ACCESS */
+.quick-wrap { display: flex; flex-wrap: wrap; gap: 5px; }
+.quick-btn {
+  padding: 5px 10px; font-size: .75rem; font-weight: 500; border: 2px solid #ccc;
+  background: #f5f5f5; color: #444; cursor: pointer;
+}
+.quick-btn:hover { border-color: #2255cc; color: #2255cc; background: #eaf0ff; }
+.quick-btn.nueva { border-color: #88ccaa; color: #116633; background: #eafaf0; }
+
+/* BG SECTION */
+.bg-sec { border: 2px solid #ccc; overflow: hidden; margin-bottom: .875rem; }
+.bg-sec-head { padding: 9px 14px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ccc; }
+.bg-sec-label { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; }
+.bg-sec-total { font-family: var(--mono); font-size: .82rem; font-weight: 600; }
+.bg-sec table { width: 100%; }
+.bg-sec td { padding: 8px 14px; font-size: .82rem; border-bottom: 1px solid #eee; }
+.bg-sec tr:last-child td { border-bottom: none; }
+.bg-grand {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 16px; background: #111; border: 2px solid #111;
+  margin-bottom: .875rem;
+}
+.bg-grand-label { font-size: .82rem; color: #aaa; font-weight: 500; }
+.bg-grand-val   { font-family: var(--mono); font-size: 1rem; font-weight: 600; color: #fff; }
+
+/* EXPORT */
+.export-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .875rem; }
+.export-card {
+  background: #fff; border: 2px solid #ccc;
+  padding: 1.5rem 1.25rem; text-align: center;
+}
+.export-card:hover { border-color: #2255cc; }
+.export-icon { width: 44px; height: 44px; margin: 0 auto 1rem; display: flex; align-items: center; justify-content: center; border: 2px solid #eee; }
+.export-card h3 { font-size: .9rem; font-weight: 600; margin-bottom: 5px; }
+.export-card p  { font-size: .78rem; color: #888; margin-bottom: 1.25rem; line-height: 1.5; }
+
+/* MODAL */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 100;
+  align-items: center; justify-content: center; padding: 1rem;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: #fff; padding: 1.5rem; width: 100%; max-width: 460px;
+  border: 2px solid #333;
+}
+.modal h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1.25rem; padding-bottom: .75rem; border-bottom: 1px solid #eee; }
+.modal-actions { display: flex; gap: .5rem; justify-content: flex-end; margin-top: 1.25rem; padding-top: .75rem; border-top: 1px solid #eee; }
+
+/* DIVIDER */
+.divider { border: none; border-top: 1px solid #e0e0e0; margin: 1rem 0; }
+
+/* ── PRINT STYLES (para PDF) ── */
+@media print {
+  body { background: #fff; }
+  .wrap { padding: 0; max-width: 100%; }
+  .no-print { display: none !important; }
+  .site-header { margin-bottom: 1rem; }
+  .tabs, .header-actions { display: none; }
+  .panel { display: block !important; }
+  .card { box-shadow: none; border: 1px solid #ddd; break-inside: avoid; }
+  .print-only { display: block !important; }
+  #panel-ingresar, #panel-cuentas, #panel-exportar { display: none !important; }
+}
+.print-only { display: none; }
+
+@media(max-width:560px) {
+  .form-row    { grid-template-columns: 1fr; }
+  .export-grid { grid-template-columns: 1fr; }
+  .metrics     { grid-template-columns: 1fr 1fr; }
+  .site-header { flex-direction: column; }
+  .header-actions { justify-content: flex-start; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ── HEADER ── -->
+  <header class="site-header">
+    <div class="header-text">
+      <h1 id="hdr-sistema">Sistema Contable</h1>
+      <p id="hdr-sub">Cargando...</p>
+    </div>
+    <div class="header-actions no-print">
+      <button class="btn btn-ghost" onclick="abrirModalInfo()">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 2H5a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2V4a2 2 0 00-2-2z"/><path d="M8 6v4M8 5v.5"/></svg>
+        Editar info
+      </button>
+    </div>
+  </header>
+
+  <!-- ── TABS ── -->
+  <div class="tabs no-print">
+    <button class="tab active" onclick="showTab('ingresar')">Ingresar</button>
+    <button class="tab" onclick="showTab('cuentas')">Cuentas</button>
+    <button class="tab" onclick="showTab('balance')">Balance</button>
+    <button class="tab" onclick="showTab('exportar')">Exportar</button>
+  </div>
+
+  <div id="toast" class="alert"></div>
+
+  <!-- ══ PANEL 1: INGRESAR ══ -->
+  <div class="panel active" id="panel-ingresar">
+    <div class="card">
+      <div class="card-title">Registrar monto</div>
+      <div class="form-group">
+        <label>Cuenta</label>
+        <select id="sel-cuenta" onchange="onCuentaChange()"></select>
+      </div>
+      <div id="info-cuenta" style="display:none"></div>
+      <div class="form-group">
+        <label>Monto (Q)</label>
+        <input type="number" id="inp-monto" placeholder="0.00" min="0" step="0.01">
+      </div>
+      <button class="btn btn-primary btn-full" onclick="registrar()">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3v10M3 8h10"/></svg>
+        Registrar
+      </button>
+    </div>
+    <div class="card">
+      <div class="card-title">Acceso rapido</div>
+      <div class="quick-wrap" id="lista-rapida"></div>
+    </div>
+  </div>
+
+  <!-- ══ PANEL 2: CUENTAS ══ -->
+  <div class="panel" id="panel-cuentas">
+    <div class="card">
+      <div class="card-title">Nueva cuenta</div>
+      <div class="form-group">
+        <label>Nombre</label>
+        <input type="text" id="nueva-nombre" placeholder="Ej: Energia electrica, Internet...">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Categoria</label>
+          <select id="nueva-tipo" onchange="onNuevoTipoChange()">
+            <option value="Activo">Activo</option>
+            <option value="Pasivo">Pasivo</option>
+            <option value="Capital">Capital</option>
+            <option value="Ingreso">Ingreso</option>
+            <option value="Gasto" selected>Gasto</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Columna natural</label>
+          <select id="nueva-natural">
+            <option value="true">Debe</option>
+            <option value="false">Haber</option>
+          </select>
+        </div>
+      </div>
+      <p id="ayuda-tipo" class="field-hint" style="margin-bottom:.875rem"></p>
+      <button class="btn btn-ok btn-full" onclick="agregarCuenta()">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3v10M3 8h10"/></svg>
+        Agregar cuenta
+      </button>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:.875rem 1.25rem;border-bottom:1px solid var(--line2);display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:.82rem;font-weight:500">Todas las cuentas</span>
+        <span id="cnt-cuentas" style="font-size:.75rem;color:var(--ink3)"></span>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nombre</th><th>Tipo</th><th>Natural</th><th></th></tr></thead>
+          <tbody id="tabla-cuentas"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PANEL 3: BALANCE DE SALDOS ══ -->
+  <div class="panel" id="panel-balance">
+    <div class="metrics" id="metrics-wrap"></div>
+    <div id="cuadre-saldos" class="cuadre"></div>
+
+    <div style="display:flex;justify-content:flex-end;margin-bottom:.5rem">
+      <button class="btn btn-danger btn-sm" onclick="limpiarTodo()">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="13" height="13"><path d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 9h8l1-9"/></svg>
+        Limpiar todo
+      </button>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Cuenta</th><th>Tipo</th><th class="num">Debe (Q)</th><th class="num">Haber (Q)</th><th></th></tr></thead>
+          <tbody id="balance-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PANEL 5: EXPORTAR ══ -->
+  <div class="panel" id="panel-exportar">
+    <div class="card" style="display:flex;flex-direction:column;gap:.75rem">
+      <button class="btn btn-full" style="background:#fff0f0;border-color:#cc2222;color:#cc2222;border-width:2px" onclick="exportarPDF()">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 10V3M5 7l3 3 3-3M3 13h10"/></svg>
+        Descargar PDF
+      </button>
+      <button class="btn btn-full" style="background:#eafaf0;border-color:#116633;color:#116633;border-width:2px" onclick="exportarExcel()">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 10V3M5 7l3 3 3-3M3 13h10"/></svg>
+        Descargar Excel
+      </button>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<!-- ══ MODAL EDITAR INFO ══ -->
+<div class="modal-overlay" id="modal-info">
+  <div class="modal">
+    <h2>Editar informacion del sistema</h2>
+    <div class="form-group">
+      <label>Nombre del sistema</label>
+      <input type="text" id="edit-sistema" placeholder="Sistema Contable">
+      <p class="field-hint">Aparece como titulo principal arriba.</p>
+    </div>
+    <div class="form-group">
+      <label>Nombre de la empresa</label>
+      <input type="text" id="edit-empresa" placeholder="Los Meros Meros en Conta">
+    </div>
+    <div class="form-group">
+      <label>Universidad</label>
+      <input type="text" id="edit-universidad" placeholder="Universidad Mariano Galvez de Guatemala">
+    </div>
+    <div class="form-group">
+      <label>Carrera y plan</label>
+      <input type="text" id="edit-carrera" placeholder="Ingenieria en Sistemas — Plan Domingo">
+    </div>
+    <div class="form-group">
+      <label>Fecha o periodo</label>
+      <input type="text" id="edit-fecha" placeholder="Al 01 de enero de 2026">
+    </div>
+    <div class="form-group">
+      <label>Nombre del propietario</label>
+      <input type="text" id="edit-propietario" placeholder="Sra. Roselyn Perdomo">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarInfo()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- SheetJS para exportar Excel -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ══ DATOS ══════════════════════════════════════════════════════════════════════
+let INFO = {
+  sistema:     "Sistema Contable",
+  empresa:     "Los Meros Meros en Conta",
+  universidad: "Universidad Mariano Galvez de Guatemala",
+  carrera:     "Ingenieria en Sistemas — Plan Domingo",
+  fecha:       "Al 01 de enero de 2026",
+  propietario: "Sra. Roselyn Perdomo",
+};
+
+let CUENTAS = [
+  {n:"Inventario inicial de mercancias",  t:"Activo",  d:true,  nueva:false},
+  {n:"Caja y Bancos",                     t:"Activo",  d:true,  nueva:false},
+  {n:"Caja Chica",                        t:"Activo",  d:true,  nueva:false},
+  {n:"Clientes",                          t:"Activo",  d:true,  nueva:false},
+  {n:"Seguros pagados por anticipado",    t:"Activo",  d:true,  nueva:false},
+  {n:"Alquileres pagados por anticipado", t:"Activo",  d:true,  nueva:false},
+  {n:"Vehiculos",                         t:"Activo",  d:true,  nueva:false},
+  {n:"Mobiliario y equipo",               t:"Activo",  d:true,  nueva:false},
+  {n:"Proveedores",                       t:"Pasivo",  d:false, nueva:false},
+  {n:"Alquileres cobrados por anticipado",t:"Pasivo",  d:false, nueva:false},
+  {n:"Provision Prestaciones laborales",  t:"Pasivo",  d:false, nueva:false},
+  {n:"Ventas",                            t:"Ingreso", d:false, nueva:false},
+  {n:"Devoluciones y rebajas compras",    t:"Ingreso", d:false, nueva:false},
+  {n:"Descuento en compras",              t:"Ingreso", d:false, nueva:false},
+  {n:"Alquileres cobrados (producto)",    t:"Ingreso", d:false, nueva:false},
+  {n:"Compras",                           t:"Gasto",   d:true,  nueva:false},
+  {n:"Devoluciones y rebajas ventas",     t:"Gasto",   d:true,  nueva:false},
+  {n:"Papeleria y utiles",                t:"Gasto",   d:true,  nueva:false},
+  {n:"Gastos de compra",                  t:"Gasto",   d:true,  nueva:false},
+  {n:"Sueldos de Venta",                  t:"Gasto",   d:true,  nueva:false},
+  {n:"Sueldos de Administracion",         t:"Gasto",   d:true,  nueva:false},
+  {n:"Cuotas patronales Ventas",          t:"Gasto",   d:true,  nueva:false},
+  {n:"Cuotas patronales Admon",           t:"Gasto",   d:true,  nueva:false},
+];
+
+const montos = {};
+let activeFiltro = "Todos";
+
+// ══ PERSISTENCIA ══════════════════════════════════════════════════════════════
+function guardar() {
+  localStorage.setItem("sc_info",    JSON.stringify(INFO));
+  localStorage.setItem("sc_cuentas", JSON.stringify(CUENTAS));
+  localStorage.setItem("sc_montos",  JSON.stringify(montos));
+}
+function cargar() {
+  try {
+    const i = localStorage.getItem("sc_info");
+    const c = localStorage.getItem("sc_cuentas");
+    const m = localStorage.getItem("sc_montos");
+    if (i) INFO    = JSON.parse(i);
+    if (c) CUENTAS = JSON.parse(c);
+    if (m) Object.assign(montos, JSON.parse(m));
+  } catch(e) {}
+  // Limpiar cuentas eliminadas del codigo base
+  const eliminadas = ["Roselyn Perdomo (Capital)"];
+  CUENTAS = CUENTAS.filter(c => !eliminadas.includes(c.n));
+  eliminadas.forEach(n => delete montos[n]);
+}
+
+function initMontos() {
+  CUENTAS.forEach(c => { if (!montos[c.n]) montos[c.n] = {debe:0, haber:0}; });
+}
+
+// ══ HELPERS ════════════════════════════════════════════════════════════════════
+const Q   = v => "Q\u00a0" + Number(v).toLocaleString("es-GT",{minimumFractionDigits:2,maximumFractionDigits:2});
+const bCl = t => "badge b-" + t.toLowerCase();
+const AYUDA = {
+  Activo:  "Los Activos tienen saldo en el Debe — bienes y derechos de la empresa.",
+  Pasivo:  "Los Pasivos tienen saldo en el Haber — obligaciones y deudas.",
+  Capital: "El Capital tiene saldo en el Haber — patrimonio del dueno.",
+  Ingreso: "Los Ingresos tienen saldo en el Haber — entradas por ventas o servicios.",
+  Gasto:   "Los Gastos tienen saldo en el Debe — salidas por operaciones.",
+};
+
+// ══ HEADER ════════════════════════════════════════════════════════════════════
+function renderHeader() {
+  document.getElementById("hdr-sistema").textContent = INFO.sistema;
+  document.getElementById("hdr-sub").textContent =
+    INFO.empresa + "  ·  " + INFO.universidad + "  ·  " + INFO.carrera + "  ·  " + INFO.propietario;
+  document.title = INFO.sistema;
+}
+
+// ══ MODAL INFO ════════════════════════════════════════════════════════════════
+function abrirModalInfo() {
+  document.getElementById("edit-sistema").value     = INFO.sistema;
+  document.getElementById("edit-empresa").value     = INFO.empresa;
+  document.getElementById("edit-universidad").value = INFO.universidad;
+  document.getElementById("edit-carrera").value     = INFO.carrera;
+  document.getElementById("edit-fecha").value       = INFO.fecha;
+  document.getElementById("edit-propietario").value = INFO.propietario;
+  document.getElementById("modal-info").classList.add("open");
+}
+function cerrarModal() {
+  document.getElementById("modal-info").classList.remove("open");
+}
+function guardarInfo() {
+  INFO.sistema     = document.getElementById("edit-sistema").value.trim()     || INFO.sistema;
+  INFO.empresa     = document.getElementById("edit-empresa").value.trim()     || INFO.empresa;
+  INFO.universidad = document.getElementById("edit-universidad").value.trim() || INFO.universidad;
+  INFO.carrera     = document.getElementById("edit-carrera").value.trim()     || INFO.carrera;
+  INFO.fecha       = document.getElementById("edit-fecha").value.trim()       || INFO.fecha;
+  INFO.propietario = document.getElementById("edit-propietario").value.trim() || INFO.propietario;
+  guardar();
+  renderHeader();
+  cerrarModal();
+  toast("Informacion actualizada.", true);
+}
+document.getElementById("modal-info").addEventListener("click", e => {
+  if (e.target === e.currentTarget) cerrarModal();
+});
+
+// ══ TABS ══════════════════════════════════════════════════════════════════════
+function showTab(id) {
+  const orden = ["ingresar","cuentas","balance","exportar"];
+  document.querySelectorAll(".tab").forEach((b,i) => b.classList.toggle("active", orden[i] === id));
+  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+  document.getElementById("panel-" + id).classList.add("active");
+  if (id === "cuentas")  renderListaCuentas("");
+  if (id === "balance")  renderBalance();
+}
+
+// ══ TOAST ═════════════════════════════════════════════════════════════════════
+function toast(msg, ok) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.className = "alert show " + (ok ? "alert-ok" : "alert-err");
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.className = "alert", 3000);
+}
+
+// ══ SELECT ════════════════════════════════════════════════════════════════════
+function rebuildSelect() {
+  const sel  = document.getElementById("sel-cuenta");
+  const prev = sel.value;
+  sel.innerHTML = "";
+  ["Activo","Pasivo","Capital","Ingreso","Gasto"].forEach(tipo => {
+    const arr = CUENTAS.filter(c => c.t === tipo);
+    if (!arr.length) return;
+    const g = document.createElement("optgroup");
+    g.label = tipo;
+    arr.forEach(c => {
+      const o = document.createElement("option");
+      o.value = c.n; o.textContent = c.n + (c.nueva ? " ★" : "");
+      g.appendChild(o);
+    });
+    sel.appendChild(g);
+  });
+  if (prev) sel.value = prev;
+  onCuentaChange();
+}
+
+function onCuentaChange() {
+  const nombre = document.getElementById("sel-cuenta").value;
+  const c      = CUENTAS.find(x => x.n === nombre);
+  if (!c) return;
+  const m = montos[c.n];
+  document.getElementById("inp-monto").value = (c.d ? m.debe : m.haber) || "";
+  const box = document.getElementById("info-cuenta");
+  box.style.display = "flex";
+  box.className = "info-row " + (c.d ? "info-debe" : "info-haber");
+  box.innerHTML = `<span class="${bCl(c.t)}">${c.t}</span>
+    <span style="font-size:.8rem">El monto se registrara en la columna <strong>${c.d ? "Debe" : "Haber"}</strong></span>`;
+}
+
+// ══ LISTA RAPIDA ═════════════════════════════════════════════════════════════
+function rebuildListaRapida() {
+  const w = document.getElementById("lista-rapida");
+  w.innerHTML = "";
+  CUENTAS.forEach(c => {
+    const b = document.createElement("button");
+    b.className = "quick-btn" + (c.nueva ? " nueva" : "");
+    b.textContent = c.n;
+    b.onclick = () => {
+      document.getElementById("sel-cuenta").value = c.n;
+      onCuentaChange();
+      showTab("ingresar");
+      document.getElementById("inp-monto").focus();
+    };
+    w.appendChild(b);
+  });
+}
+
+// ══ REGISTRAR ═════════════════════════════════════════════════════════════════
+function registrar() {
+  const nombre = document.getElementById("sel-cuenta").value;
+  const c      = CUENTAS.find(x => x.n === nombre);
+  const raw    = document.getElementById("inp-monto").value;
+  if (!raw || isNaN(raw) || Number(raw) < 0) { toast("Ingresa un monto valido.", false); return; }
+  const val = parseFloat(raw);
+  if (c.d) montos[nombre].debe  = val;
+  else     montos[nombre].haber = val;
+  guardar();
+  toast("Guardado: " + nombre + " → " + Q(val) + " en " + (c.d ? "Debe" : "Haber"), true);
+}
+
+// ══ NUEVO TIPO ════════════════════════════════════════════════════════════════
+function onNuevoTipoChange() {
+  const tipo = document.getElementById("nueva-tipo").value;
+  document.getElementById("nueva-natural").value = (tipo==="Activo"||tipo==="Gasto") ? "true" : "false";
+  document.getElementById("ayuda-tipo").textContent = AYUDA[tipo];
+}
+document.getElementById("ayuda-tipo").textContent = AYUDA["Gasto"];
+
+// ══ AGREGAR/ELIMINAR CUENTA ═══════════════════════════════════════════════════
+function agregarCuenta() {
+  const nombre  = document.getElementById("nueva-nombre").value.trim();
+  const tipo    = document.getElementById("nueva-tipo").value;
+  const natural = document.getElementById("nueva-natural").value === "true";
+  if (!nombre) { toast("Escribe el nombre de la cuenta.", false); return; }
+  if (CUENTAS.find(c => c.n.toLowerCase() === nombre.toLowerCase())) {
+    toast("Ya existe una cuenta con ese nombre.", false); return;
+  }
+  CUENTAS.push({n:nombre, t:tipo, d:natural, nueva:true});
+  montos[nombre] = {debe:0, haber:0};
+  document.getElementById("nueva-nombre").value = "";
+  guardar(); rebuildSelect(); rebuildListaRapida(); renderListaCuentas("");
+  toast("Cuenta agregada: " + nombre, true);
+}
+function eliminarCuenta(nombre) {
+  CUENTAS = CUENTAS.filter(c => c.n !== nombre);
+  delete montos[nombre];
+  guardar(); rebuildSelect(); rebuildListaRapida(); renderListaCuentas("");
+  toast("Cuenta eliminada: " + nombre, true);
+}
+
+// ══ LISTA CUENTAS ═════════════════════════════════════════════════════════════
+function renderListaCuentas(q) {
+  document.getElementById("cnt-cuentas").textContent = CUENTAS.length + " cuentas";
+  const lista = CUENTAS.filter(c => c.n.toLowerCase().includes(q.toLowerCase()));
+  document.getElementById("tabla-cuentas").innerHTML = lista.map(c => {
+    const nEsc = c.n.replace(/'/g, "\\'");
+    return `<tr><td class="${c.nueva?"edited":""}">${c.n}${c.nueva?'<span class="badge-nueva">nueva</span>':''}</td>
+     <td><span class="${bCl(c.t)}">${c.t}</span></td>
+     <td style="font-size:.75rem;color:var(--ink3)">${c.d?"Debe":"Haber"}</td>
+     <td><button class="btn-x" onclick="eliminarCuenta('${nEsc}')">&#x2715;</button></td></tr>`;
+  }).join("");
+}
+
+// ══ FILTROS ═══════════════════════════════════════════════════════════════════
+function buildFiltros() {
+  activeFiltro = "Todos";
+}
+
+// ══ BALANCE DE SALDOS ═════════════════════════════════════════════════════════
+function renderBalance() {
+  const tD = CUENTAS.reduce((s,c) => s + montos[c.n].debe,  0);
+  const tH = CUENTAS.reduce((s,c) => s + montos[c.n].haber, 0);
+  const ok = Math.abs(tD - tH) < 0.01;
+  document.getElementById("metrics-wrap").innerHTML =
+    `<div class="metric"><div class="metric-label">Total Debe</div><div class="metric-val">${Q(tD)}</div></div>
+     <div class="metric"><div class="metric-label">Total Haber</div><div class="metric-val">${Q(tH)}</div></div>
+     <div class="metric"><div class="metric-label">Diferencia</div><div class="metric-val">${Q(Math.abs(tD-tH))}</div></div>`;
+  const el = document.getElementById("cuadre-saldos");
+  el.className = "cuadre " + (ok ? "cuadre-ok" : "cuadre-warn");
+  el.textContent = ok ? "Balance cuadrado — Debe = Haber" : "Diferencia detectada — revisa los montos";
+  renderBalanceTable("", activeFiltro);
+}
+
+function renderBalanceTable(q, filtro) {
+  // Solo mostrar cuentas que tengan algun monto ingresado
+  const conDatos = CUENTAS.filter(c => montos[c.n].debe > 0 || montos[c.n].haber > 0);
+  const lista = conDatos.filter(c =>
+    (filtro==="Todos"||c.t===filtro) && c.n.toLowerCase().includes((q||"").toLowerCase())
+  );
+  // Los totales siempre usan TODAS las cuentas con datos (sin importar filtro/busqueda)
+  const tD = conDatos.reduce((s,c) => s + montos[c.n].debe,  0);
+  const tH = conDatos.reduce((s,c) => s + montos[c.n].haber, 0);
+
+  if (lista.length === 0) {
+    document.getElementById("balance-body").innerHTML =
+      `<tr><td colspan="4" style="text-align:center;color:var(--ink3);padding:2rem;font-size:.82rem">
+        ${conDatos.length === 0
+          ? "Aun no has ingresado montos. Ve a la pestana Ingresar para comenzar."
+          : "Ninguna cuenta con monto coincide con el filtro actual."}
+      </td></tr>`;
+    return;
+  }
+
+  document.getElementById("balance-body").innerHTML = lista.map(c => {
+    const m=montos[c.n], s=m.debe-m.haber;
+    const nEsc = c.n.replace(/'/g, "\\'");
+    return `<tr>
+      <td class="edited">${c.n}${c.nueva?'<span class="badge-nueva">nueva</span>':''}</td>
+      <td><span class="${bCl(c.t)}">${c.t}</span></td>
+      <td class="num">${m.debe>0?Q(m.debe):"—"}</td>
+      <td class="num">${m.haber>0?Q(m.haber):"—"}</td>
+      <td><button class="btn-x" onclick="limpiarCuenta('${nEsc}')" title="Limpiar monto">&#x2715;</button></td>
+      </tr>`;
+  }).join("") +
+  `<tr class="total-row"><td colspan="2">Totales (${conDatos.length} cuentas con monto)</td>
+   <td class="num">${Q(tD)}</td><td class="num">${Q(tH)}</td><td></td></tr>`;
+}
+
+// ══ BALANCE GENERAL ═══════════════════════════════════════════════════════════
+function calcBG() {
+  const get  = t => CUENTAS.filter(c => c.t === t);
+  const sum  = a => a.reduce((s,c) => s + Math.abs(montos[c.n].debe - montos[c.n].haber), 0);
+  const tA   = sum(get("Activo"));
+  const tP   = sum(get("Pasivo"));
+  const tCap = sum(get("Capital"));
+  const tI   = sum(get("Ingreso"));
+  const tG   = sum(get("Gasto"));
+  const util = tI - tG;
+  const tPC  = tP + tCap + util;
+  return {get, sum, tA, tP, tCap, tI, tG, util, tPC, cuad: Math.abs(tA-tPC)<0.01};
+}
+
+function renderGeneral() {
+  const {get, tA, tP, tCap, tI, tG, util, tPC, cuad} = calcBG();
+  const COLOR = {Activo:"#1a56db",Pasivo:"#d97706",Capital:"#7c3aed",Ingreso:"#059669",Gasto:"#dc2626"};
+
+  const sec = (titulo, tipo) => {
+    const arr = get(tipo);
+    if (!arr.length) return "";
+    return `<div class="bg-sec" style="border-top:2px solid ${COLOR[tipo]}">
+      <div class="bg-sec-head" style="background:${COLOR[tipo]}11">
+        <span class="bg-sec-label" style="color:${COLOR[tipo]}">${titulo}</span>
+        <span class="bg-sec-total">${Q(arr.reduce((s,c)=>s+Math.abs(montos[c.n].debe-montos[c.n].haber),0))}</span>
+      </div>
+      <table>${arr.map(c=>{
+        const s=Math.abs(montos[c.n].debe-montos[c.n].haber);
+        return `<tr><td>${c.n}${c.nueva?'<span class="badge-nueva">nueva</span>':''}</td><td class="num">${Q(s)}</td></tr>`;
+      }).join("")}</table></div>`;
+  };
+
+  document.getElementById("bg-content").innerHTML =
+    `<div class="card" style="text-align:center;border-top:3px solid var(--accent);margin-bottom:1rem">
+       <div style="font-size:.7rem;font-weight:500;color:var(--ink3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">${INFO.universidad}</div>
+       <div style="font-size:1rem;font-weight:500;color:var(--ink)">${INFO.sistema} — ${INFO.empresa}</div>
+       <div style="font-size:.8rem;color:var(--ink3);margin-top:2px">${INFO.fecha} · ${INFO.propietario}</div>
+     </div>
+     ${sec("Activos", "Activo")}
+     <div class="bg-grand" style="background:var(--accent);margin-bottom:1rem">
+       <span class="bg-grand-label">Total Activos</span>
+       <span class="bg-grand-val">${Q(tA)}</span>
+     </div>
+     ${sec("Pasivos", "Pasivo")}
+     ${sec("Capital", "Capital")}
+     <div class="bg-sec" style="border-top:2px solid #059669">
+       <div class="bg-sec-head" style="background:#05966911">
+         <span class="bg-sec-label" style="color:#059669">${util>=0?"Utilidad del ejercicio":"Perdida del ejercicio"}</span>
+         <span class="bg-sec-total">${Q(Math.abs(util))}</span>
+       </div>
+       <table>
+         <tr><td style="color:var(--ink3);font-size:.78rem">Ingresos totales</td><td class="num">${Q(tI)}</td></tr>
+         <tr><td style="color:var(--ink3);font-size:.78rem">Gastos totales</td><td class="num">${Q(tG)}</td></tr>
+       </table>
+     </div>
+     <div class="bg-grand">
+       <span class="bg-grand-label">Total Pasivo + Capital</span>
+       <span class="bg-grand-val">${Q(tPC)}</span>
+     </div>
+     <div class="cuadre ${cuad?"cuadre-ok":"cuadre-err"}">
+       ${cuad ? "Balance cuadrado — Activo = Pasivo + Capital"
+              : "Diferencia de " + Q(Math.abs(tA-tPC)) + " — revisa los montos"}
+     </div>`;
+}
+
+// ══ EXPORTAR PDF ══════════════════════════════════════════════════════════════
+function exportarPDF() {
+  renderBalance();
+  window.print();
+}
+
+// ══ EXPORTAR EXCEL ════════════════════════════════════════════════════════════
+function exportarExcel() {
+  if (typeof XLSX === "undefined") {
+    toast("Cargando libreria, intenta en un momento...", false); return;
+  }
+  const wb = XLSX.utils.book_new();
+
+  // ── Hoja 1: Balance de Saldos ──
+  const hdr1 = [
+    [INFO.sistema + " — " + INFO.empresa],
+    [INFO.universidad + " · " + INFO.carrera],
+    [INFO.fecha + " · " + INFO.propietario],
+    [],
+    ["Cuenta", "Tipo", "Debe (Q)", "Haber (Q)"]
+  ];
+  const rows1 = CUENTAS.map(c => {
+    const m = montos[c.n];
+    return [c.n, c.t, m.debe||0, m.haber||0];
+  });
+  const tD = CUENTAS.reduce((s,c)=>s+montos[c.n].debe, 0);
+  const tH = CUENTAS.reduce((s,c)=>s+montos[c.n].haber, 0);
+  rows1.push(["TOTALES", "", tD, tH]);
+  const ws1 = XLSX.utils.aoa_to_sheet([...hdr1, ...rows1]);
+  ws1["!cols"] = [{wch:40},{wch:10},{wch:14},{wch:14},{wch:14}];
+  XLSX.utils.book_append_sheet(wb, ws1, "Balance de Saldos");
+
+  // ── Hoja 2: Balance General ──
+  const {get, tA, tP, tCap, tI, tG, util, tPC} = calcBG();
+  const hdr2 = [[INFO.sistema + " — " + INFO.empresa], [INFO.fecha], [], ["BALANCE GENERAL"], []];
+  const rows2 = [];
+  const addSec = (titulo, tipo) => {
+    rows2.push([titulo.toUpperCase(), ""]);
+    get(tipo).forEach(c => rows2.push(["  " + c.n, Math.abs(montos[c.n].debe-montos[c.n].haber)]));
+    rows2.push([]);
+  };
+  addSec("Activos", "Activo");
+  rows2.push(["TOTAL ACTIVOS", tA], []);
+  addSec("Pasivos", "Pasivo");
+  addSec("Capital", "Capital");
+  rows2.push([util>=0?"Utilidad del ejercicio":"Perdida del ejercicio", Math.abs(util)]);
+  rows2.push(["TOTAL PASIVO + CAPITAL", tPC], []);
+  rows2.push([Math.abs(tA-tPC)<0.01?"BALANCE CUADRADO":"DIFERENCIA: "+Q(Math.abs(tA-tPC)), ""]);
+  const ws2 = XLSX.utils.aoa_to_sheet([...hdr2, ...rows2]);
+  ws2["!cols"] = [{wch:40},{wch:16}];
+  XLSX.utils.book_append_sheet(wb, ws2, "Balance General");
+
+  XLSX.writeFile(wb, INFO.empresa.replace(/\s+/g,"_") + "_Contable.xlsx");
+  toast("Archivo Excel descargado correctamente.", true);
+}
+
+// ══ LIMPIAR ═══════════════════════════════════════════════════════════════════
+function limpiarCuenta(nombre) {
+  montos[nombre].debe  = 0;
+  montos[nombre].haber = 0;
+  guardar();
+  renderBalance();
+  toast("Monto limpiado: " + nombre, true);
+}
+
+function limpiarTodo() {
+  CUENTAS.forEach(c => { montos[c.n].debe = 0; montos[c.n].haber = 0; });
+  guardar();
+  renderBalance();
+  toast("Todos los montos fueron limpiados.", true);
+}
+
+// ══ INIT ══════════════════════════════════════════════════════════════════════
+cargar();
+initMontos();
+renderHeader();
+rebuildSelect();
+rebuildListaRapida();
+buildFiltros();
+</script>
+</body>
+</html>
