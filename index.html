@@ -273,7 +273,9 @@ tr.total-row:hover td { background: #f0f0f0; }
   <header class="site-header">
     <div class="header-text">
       <h1 id="hdr-sistema">Sistema Contable</h1>
-      <p id="hdr-sub">Cargando...</p>
+      <p id="hdr-empresa" style="font-size:.82rem;color:rgba(255,255,255,.9);margin-top:4px;font-weight:500"></p>
+      <p id="hdr-periodo" style="font-size:.75rem;color:rgba(255,255,255,.7);margin-top:1px"></p>
+      <p id="hdr-propietario" style="font-size:.75rem;color:rgba(255,255,255,.7);margin-top:1px"></p>
     </div>
     <div class="header-actions no-print">
       <button class="btn btn-ghost" onclick="abrirModalInfo()">
@@ -393,10 +395,12 @@ tr.total-row:hover td { background: #f0f0f0; }
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 10V3M5 7l3 3 3-3M3 13h10"/></svg>
         Descargar PDF
       </button>
-      <button class="btn btn-full" style="background:#eafaf0;border-color:#116633;color:#116633;border-width:2px" onclick="exportarExcel()">
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 10V3M5 7l3 3 3-3M3 13h10"/></svg>
-        Descargar Excel
-      </button>
+    </div>
+    <div class="card" style="text-align:center">
+      <div class="card-title">Codigo QR de acceso</div>
+      <p style="font-size:.78rem;color:#888;margin-bottom:1rem">Escanea con la camara del celular para abrir el sistema</p>
+      <div id="qr-container" style="display:inline-block;padding:12px;border:2px solid #ccc;background:#fff"></div>
+      <p style="font-size:.72rem;color:#aaa;margin-top:.75rem">christophertahay.github.io/Datos-Contables-/</p>
     </div>
   </div>
 
@@ -438,6 +442,8 @@ tr.total-row:hover td { background: #f0f0f0; }
   </div>
 </div>
 
+<!-- QR Code -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <!-- Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- SheetJS para exportar Excel -->
@@ -552,9 +558,10 @@ const AYUDA = {
 
 // ══ HEADER ════════════════════════════════════════════════════════════════════
 function renderHeader() {
-  document.getElementById("hdr-sistema").textContent = INFO.sistema;
-  document.getElementById("hdr-sub").textContent =
-    INFO.empresa + "  ·  " + INFO.universidad + "  ·  " + INFO.carrera + "  ·  " + INFO.propietario;
+  document.getElementById("hdr-sistema").textContent    = INFO.sistema;
+  document.getElementById("hdr-empresa").textContent    = INFO.empresa;
+  document.getElementById("hdr-periodo").textContent    = INFO.fecha;
+  document.getElementById("hdr-propietario").textContent= INFO.propietario;
   document.title = INFO.sistema;
 }
 
@@ -595,6 +602,7 @@ function showTab(id) {
   document.getElementById("panel-" + id).classList.add("active");
   if (id === "cuentas")  renderListaCuentas("");
   if (id === "balance")  renderBalance();
+  if (id === "exportar") generarQR();
 }
 
 // ══ TOAST ═════════════════════════════════════════════════════════════════════
@@ -707,7 +715,7 @@ function renderListaCuentas(q) {
   const lista = CUENTAS.filter(c => c.n.toLowerCase().includes(q.toLowerCase()));
   document.getElementById("tabla-cuentas").innerHTML = lista.map(c => {
     const nEsc = c.n.replace(/'/g, "\\'");
-    return `<tr><td class="${c.nueva?"edited":""}">${c.n}${c.nueva?'<span class="badge-nueva">nueva</span>':''}</td>
+    return `<tr><td>${c.n}</td>
      <td><span class="${bCl(c.t)}">${c.t}</span></td>
      <td style="font-size:.75rem;color:var(--ink3)">${c.d?"Debe":"Haber"}</td>
      <td><button class="btn-x" onclick="eliminarCuenta('${nEsc}')">&#x2715;</button></td></tr>`;
@@ -758,7 +766,7 @@ function renderBalanceTable(q, filtro) {
     const m=montos[c.n], s=m.debe-m.haber;
     const nEsc = c.n.replace(/'/g, "\\'");
     return `<tr>
-      <td class="edited">${c.n}${c.nueva?'<span class="badge-nueva">nueva</span>':''}</td>
+      <td>${c.n}</td>
       <td><span class="${bCl(c.t)}">${c.t}</span></td>
       <td class="num">${m.debe>0?Q(m.debe):"—"}</td>
       <td class="num">${m.haber>0?Q(m.haber):"—"}</td>
@@ -797,7 +805,7 @@ function renderGeneral() {
       </div>
       <table>${arr.map(c=>{
         const s=Math.abs(montos[c.n].debe-montos[c.n].haber);
-        return `<tr><td>${c.n}${c.nueva?'<span class="badge-nueva">nueva</span>':''}</td><td class="num">${Q(s)}</td></tr>`;
+        return `<tr><td>${c.n}</td><td class="num">${Q(s)}</td></tr>`;
       }).join("")}</table></div>`;
   };
 
@@ -904,6 +912,19 @@ function limpiarTodo() {
   guardar();
   renderBalance();
   toast("Todos los montos fueron limpiados.", true);
+}
+
+// ══ QR CODE ═══════════════════════════════════════════════════════════════════
+function generarQR() {
+  const container = document.getElementById("qr-container");
+  if (!container || container.innerHTML !== "") return;
+  new QRCode(container, {
+    text: "https://christophertahay.github.io/Datos-Contables-/",
+    width: 180,
+    height: 180,
+    colorDark: "#111111",
+    colorLight: "#ffffff",
+  });
 }
 
 // ══ INIT ══════════════════════════════════════════════════════════════════════
