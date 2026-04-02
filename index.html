@@ -438,6 +438,8 @@ tr.total-row:hover td { background: #f0f0f0; }
   </div>
 </div>
 
+<!-- Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- SheetJS para exportar Excel -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
@@ -480,12 +482,45 @@ let CUENTAS = [
 const montos = {};
 let activeFiltro = "Todos";
 
-// ══ PERSISTENCIA ══════════════════════════════════════════════════════════════
+// ══ SUPABASE ══════════════════════════════════════════════════════════════════
+const SUPA_URL = "https://ebwtscmgvxdkhsqztjpe.supabase.co";
+const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVid3RzY21ndnhka2hzcXp0anBlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxMDkwNTksImV4cCI6MjA5MDY4NTA1OX0.ZB_wkO-FygLbme0CMlz-1NsX8zkOMbwhuy73pr9aYfQ";
+const supa = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+// Guarda un valor en Supabase (clave/valor)
+async function guardarEnNube(clave, valor) {
+  const { error } = await supa.from("Datos")
+    .upsert({ clave, valor: JSON.stringify(valor) }, { onConflict: "clave" });
+  if (error) console.error("Error guardando:", error.message);
+}
+
+// Lee todos los valores de Supabase y los aplica
+async function cargarDeNube() {
+  const { data, error } = await supa.from("Datos").select("*");
+  if (error) { console.error("Error cargando:", error.message); return; }
+  data.forEach(row => {
+    try {
+      if (row.clave === "info")    INFO    = JSON.parse(row.valor);
+      if (row.clave === "cuentas") CUENTAS = JSON.parse(row.valor);
+      if (row.clave === "montos")  Object.assign(montos, JSON.parse(row.valor));
+    } catch(e) {}
+  });
+  const eliminadas = ["Roselyn Perdomo (Capital)"];
+  CUENTAS = CUENTAS.filter(c => !eliminadas.includes(c.n));
+  eliminadas.forEach(n => delete montos[n]);
+}
+
+// Funcion guardar — ahora guarda en nube Y en localStorage como respaldo
 function guardar() {
   localStorage.setItem("sc_info",    JSON.stringify(INFO));
   localStorage.setItem("sc_cuentas", JSON.stringify(CUENTAS));
   localStorage.setItem("sc_montos",  JSON.stringify(montos));
+  guardarEnNube("info",    INFO);
+  guardarEnNube("cuentas", CUENTAS);
+  guardarEnNube("montos",  montos);
 }
+
+// Funcion cargar — primero carga de localStorage, luego sincroniza con nube
 function cargar() {
   try {
     const i = localStorage.getItem("sc_info");
@@ -495,7 +530,6 @@ function cargar() {
     if (c) CUENTAS = JSON.parse(c);
     if (m) Object.assign(montos, JSON.parse(m));
   } catch(e) {}
-  // Limpiar cuentas eliminadas del codigo base
   const eliminadas = ["Roselyn Perdomo (Capital)"];
   CUENTAS = CUENTAS.filter(c => !eliminadas.includes(c.n));
   eliminadas.forEach(n => delete montos[n]);
@@ -873,12 +907,28 @@ function limpiarTodo() {
 }
 
 // ══ INIT ══════════════════════════════════════════════════════════════════════
-cargar();
+// Mostrar indicador de carga
+document.getElementById("toast").textContent = "Conectando con la nube...";
+document.getElementById("toast").className = "alert show alert-warn";
+
+cargar(); // carga localStorage primero (rapido)
 initMontos();
 renderHeader();
 rebuildSelect();
 rebuildListaRapida();
 buildFiltros();
+
+// Luego sincroniza con Supabase (puede tardar un momento)
+cargarDeNube().then(() => {
+  initMontos();
+  renderHeader();
+  rebuildSelect();
+  rebuildListaRapida();
+  document.getElementById("toast").className = "alert";
+  toast("Datos sincronizados con la nube.", true);
+}).catch(() => {
+  toast("Sin conexion a la nube — usando datos locales.", false);
+});
 </script>
 </body>
 </html>
