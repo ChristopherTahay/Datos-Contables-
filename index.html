@@ -526,8 +526,6 @@ tr.total-row:hover td { background: #f0f0f0; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <!-- Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<!-- SheetJS para exportar Excel -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 // ══════════════════════════════════════════════════════════════════════════════
 // ══ DATOS POR DEFECTO ════════════════════════════════════════════════════════
@@ -1295,101 +1293,6 @@ function exportarPDF() {
   }, 100);
 }
  
-function exportarExcel() {
-  if (typeof XLSX === "undefined") {
-    toast("Cargando libreria, intenta en un momento...", false); return;
-  }
-  const wb = XLSX.utils.book_new();
-  const cab = [
-    [INFO.sistema + " — " + INFO.empresa],
-    [INFO.universidad + " · " + INFO.carrera],
-    [INFO.fecha + " · " + INFO.propietario],
-    [],
-  ];
- 
-  // ── Hoja 1: Libro Diario ──
-  const rows1 = [...cab, ["LIBRO DIARIO"], [], ["N° Partida","Fecha","Codigo","Cuenta","Concepto","Debe","Haber"]];
-  PARTIDAS.sort((a,b) => a.fecha.localeCompare(b.fecha) || a.id - b.id).forEach(p => {
-    p.movimientos.forEach((m, i) => {
-      const c = CATALOGO[m.cuentaId];
-      rows1.push([
-        i === 0 ? p.id : "",
-        i === 0 ? p.fecha : "",
-        m.cuentaId,
-        c ? c.nombre : "(eliminada)",
-        i === 0 ? p.descripcion : "",
-        m.debe || "",
-        m.haber || "",
-      ]);
-    });
-    rows1.push([]);
-  });
-  const ws1 = XLSX.utils.aoa_to_sheet(rows1);
-  ws1["!cols"] = [{wch:12},{wch:12},{wch:8},{wch:32},{wch:30},{wch:12},{wch:12}];
-  XLSX.utils.book_append_sheet(wb, ws1, "Libro Diario");
- 
-  // ── Hoja 2: Libro Mayor ──
-  const mayor = calcularMayor();
-  const rows2 = [...cab, ["LIBRO MAYOR"], []];
-  Object.keys(mayor).sort((a,b) => parseInt(a) - parseInt(b)).forEach(id => {
-    const c = CATALOGO[id];
-    const m = mayor[id];
-    rows2.push([c.nombre + "  (" + id + ")"]);
-    rows2.push(["Fecha","Partida","Concepto","Debe","Haber"]);
-    m.movs.forEach(mv => {
-      rows2.push([mv.fecha, "N° " + mv.partidaId, mv.descripcion, mv.debe || "", mv.haber || ""]);
-    });
-    const neto = m.totalDebe - m.totalHaber;
-    rows2.push(["", "", "TOTALES", m.totalDebe, m.totalHaber]);
-    rows2.push(["", "", neto >= 0 ? "Saldo Deudor" : "Saldo Acreedor", Math.abs(neto), ""]);
-    rows2.push([]);
-  });
-  const ws2 = XLSX.utils.aoa_to_sheet(rows2);
-  ws2["!cols"] = [{wch:14},{wch:12},{wch:30},{wch:12},{wch:12}];
-  XLSX.utils.book_append_sheet(wb, ws2, "Libro Mayor");
- 
-  // ── Hoja 3: Balance de Saldos ──
-  const filas = calcularBalance();
-  const rows3 = [...cab, ["BALANCE DE COMPROBACION"], [],
-    ["Codigo","Cuenta","Tipo","Debe","Haber","Saldo Deudor","Saldo Acreedor"]];
-  filas.forEach(f => {
-    rows3.push([f.id, f.nombre, f.tipo, f.totalDebe, f.totalHaber, f.saldoDebe || "", f.saldoHaber || ""]);
-  });
-  const tD = filas.reduce((s,f) => s + f.totalDebe,  0);
-  const tH = filas.reduce((s,f) => s + f.totalHaber, 0);
-  const sD = filas.reduce((s,f) => s + f.saldoDebe,  0);
-  const sH = filas.reduce((s,f) => s + f.saldoHaber, 0);
-  rows3.push(["", "TOTALES", "", tD, tH, sD, sH]);
-  const ws3 = XLSX.utils.aoa_to_sheet(rows3);
-  ws3["!cols"] = [{wch:8},{wch:32},{wch:10},{wch:12},{wch:12},{wch:14},{wch:14}];
-  XLSX.utils.book_append_sheet(wb, ws3, "Balance de Saldos");
- 
-  // ── Hoja 4: Balance General ──
-  const { porTipo, tA, tP, tCap, tI, tG, util, tPC } = calcularBG();
-  const rows4 = [...cab, ["BALANCE GENERAL"], []];
-  const addSec = (titulo, tipo) => {
-    const arr = porTipo(tipo);
-    if (!arr.length) return;
-    rows4.push([titulo.toUpperCase()]);
-    arr.forEach(f => rows4.push(["  " + f.nombre, f.saldoDebe + f.saldoHaber]));
-    rows4.push([]);
-  };
-  addSec("Activos", "Activo");
-  rows4.push(["TOTAL ACTIVOS", tA]); rows4.push([]);
-  addSec("Pasivos", "Pasivo");
-  addSec("Capital", "Capital");
-  if (tI > 0 || tG > 0) {
-    rows4.push([util >= 0 ? "Utilidad del ejercicio" : "Perdida del ejercicio", Math.abs(util)]);
-  }
-  rows4.push(["TOTAL PASIVO + CAPITAL", tPC]); rows4.push([]);
-  rows4.push([Math.abs(tA - tPC) < 0.01 ? "BALANCE CUADRADO" : "DIFERENCIA: " + Q(Math.abs(tA - tPC))]);
-  const ws4 = XLSX.utils.aoa_to_sheet(rows4);
-  ws4["!cols"] = [{wch:40},{wch:16}];
-  XLSX.utils.book_append_sheet(wb, ws4, "Balance General");
- 
-  XLSX.writeFile(wb, INFO.empresa.replace(/\s+/g,"_") + "_Contable.xlsx");
-  toast("Archivo Excel descargado correctamente.", true);
-}
  
 // ══════════════════════════════════════════════════════════════════════════════
 // ══ QR ═══════════════════════════════════════════════════════════════════════
@@ -1440,24 +1343,40 @@ function generarQR() {
  
 document.getElementById("ayuda-tipo").textContent = AYUDA["Gasto"];
  
+// Helper para envolver promesas con timeout
+function conTimeout(promesa, ms, mensaje) {
+  return Promise.race([
+    promesa,
+    new Promise((_, rej) => setTimeout(() => rej(new Error(mensaje || "Timeout")), ms))
+  ]);
+}
+ 
 (async function init() {
   // Mostrar indicador de carga
   const t = document.getElementById("toast");
   t.textContent = "Conectando con la nube...";
   t.className = "alert show alert-warn";
  
-  // Cargar local primero (rapido)
+  // Failsafe: si despues de 8 segundos sigue mostrando "Conectando", limpiar
+  const failsafe = setTimeout(() => {
+    if (t.textContent.includes("Conectando")) {
+      t.className = "alert";
+    }
+  }, 8000);
+ 
+  // Cargar local primero (rapido) — el sistema queda usable de inmediato
   cargarLocal();
   renderHeader();
   resetFormPartida();
   renderDiario();
  
-  // Migrar y luego sincronizar con la nube
+  // Migrar y luego sincronizar con la nube (con timeout de 7 segundos)
   try {
-    await migrarSiNecesario();
-    await cargarDeNube();
+    await conTimeout(migrarSiNecesario(), 7000, "Migracion lenta");
+    await conTimeout(cargarDeNube(), 7000, "Carga lenta");
+ 
     // Si no hay nada en la nube, guardar defaults
-    const { data } = await supa.from("Datos").select("clave");
+    const { data } = await conTimeout(supa.from("Datos").select("clave"), 5000, "Verificacion lenta");
     const claves = new Set((data || []).map(r => r.clave));
     if (!claves.has("catalogo")) await guardarEnNube("catalogo", CATALOGO);
     if (!claves.has("info"))     await guardarEnNube("info",     INFO);
@@ -1466,10 +1385,12 @@ document.getElementById("ayuda-tipo").textContent = AYUDA["Gasto"];
     renderHeader();
     resetFormPartida();
     renderDiario();
+    clearTimeout(failsafe);
     t.className = "alert";
     toast("Datos sincronizados con la nube.", true);
   } catch (e) {
-    console.error(e);
+    console.warn("Cloud sync issue:", e.message);
+    clearTimeout(failsafe);
     toast("Sin conexion a la nube — usando datos locales.", false);
   }
 })();
