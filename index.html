@@ -589,31 +589,10 @@ const SUPA_URL = "https://ebwtscmgvxdkhsqztjpe.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVid3RzY21ndnhka2hzcXp0anBlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxMDkwNTksImV4cCI6MjA5MDY4NTA1OX0.ZB_wkO-FygLbme0CMlz-1NsX8zkOMbwhuy73pr9aYfQ";
 const supa = supabase.createClient(SUPA_URL, SUPA_KEY);
  
-const VERSION = "2";  // marcador para migrar v1 a v2
- 
 async function guardarEnNube(clave, valor) {
   const { error } = await supa.from("Datos")
     .upsert({ clave, valor: JSON.stringify(valor) }, { onConflict: "clave" });
   if (error) console.error("Error guardando " + clave + ":", error.message);
-}
- 
-async function migrarSiNecesario() {
-  const { data, error } = await supa.from("Datos").select("clave");
-  if (error) { console.warn("No se pudo verificar version:", error.message); return; }
-  const claves = new Set((data || []).map(r => r.clave));
- 
-  if (!claves.has("version")) {
-    // Es instalacion v1 o fresca - limpiar claves viejas
-    const aBorrar = ["cuentas", "montos"].filter(k => claves.has(k));
-    if (aBorrar.length) {
-      const { error: errBorrar } = await supa.from("Datos").delete().in("clave", aBorrar);
-      if (errBorrar) console.warn("Error limpiando viejo:", errBorrar.message);
-    }
-    await guardarEnNube("version", VERSION);
-  }
-  // Limpiar localStorage viejo siempre por las dudas
-  localStorage.removeItem("sc_cuentas");
-  localStorage.removeItem("sc_montos");
 }
  
 async function cargarDeNube() {
@@ -626,7 +605,10 @@ async function cargarDeNube() {
       if (row.clave === "partidas") PARTIDAS = JSON.parse(row.valor);
     } catch(e) { console.warn("Error parseando " + row.clave); }
   });
-  return true;
+  // Limpiar localStorage de claves viejas (v1) por las dudas
+  localStorage.removeItem("sc_cuentas");
+  localStorage.removeItem("sc_montos");
+  return data || [];
 }
  
 function guardar() {
@@ -1357,12 +1339,12 @@ function conTimeout(promesa, ms, mensaje) {
   t.textContent = "Conectando con la nube...";
   t.className = "alert show alert-warn";
  
-  // Failsafe: si despues de 8 segundos sigue mostrando "Conectando", limpiar
+  // Failsafe: si despues de 16 segundos sigue mostrando "Conectando", limpiar
   const failsafe = setTimeout(() => {
     if (t.textContent.includes("Conectando")) {
       t.className = "alert";
     }
-  }, 8000);
+  }, 16000);
  
   // Cargar local primero (rapido) — el sistema queda usable de inmediato
   cargarLocal();
@@ -1370,17 +1352,17 @@ function conTimeout(promesa, ms, mensaje) {
   resetFormPartida();
   renderDiario();
  
-  // Migrar y luego sincronizar con la nube (con timeout de 7 segundos)
+  // Sincronizar con la nube (timeout generoso de 15 segundos)
   try {
-    await conTimeout(migrarSiNecesario(), 7000, "Migracion lenta");
-    await conTimeout(cargarDeNube(), 7000, "Carga lenta");
+    const filas = await conTimeout(cargarDeNube(), 15000, "Carga lenta de Supabase");
  
-    // Si no hay nada en la nube, guardar defaults
-    const { data } = await conTimeout(supa.from("Datos").select("clave"), 5000, "Verificacion lenta");
-    const claves = new Set((data || []).map(r => r.clave));
-    if (!claves.has("catalogo")) await guardarEnNube("catalogo", CATALOGO);
-    if (!claves.has("info"))     await guardarEnNube("info",     INFO);
-    if (!claves.has("partidas")) await guardarEnNube("partidas", PARTIDAS);
+    // Si Supabase respondio bien, ver que claves nuevas faltan y guardarlas
+    if (filas !== false) {
+      const claves = new Set(filas.map(r => r.clave));
+      if (!claves.has("catalogo")) await guardarEnNube("catalogo", CATALOGO);
+      if (!claves.has("info"))     await guardarEnNube("info",     INFO);
+      if (!claves.has("partidas")) await guardarEnNube("partidas", PARTIDAS);
+    }
  
     renderHeader();
     resetFormPartida();
@@ -1389,7 +1371,7 @@ function conTimeout(promesa, ms, mensaje) {
     t.className = "alert";
     toast("Datos sincronizados con la nube.", true);
   } catch (e) {
-    console.warn("Cloud sync issue:", e.message);
+    console.warn("Cloud sync issue:", e && e.message);
     clearTimeout(failsafe);
     toast("Sin conexion a la nube — usando datos locales.", false);
   }
