@@ -177,6 +177,14 @@ document
                 renderDiario();
             }
 
+            // ═════════ SINCRONIZACION CON LA NUBE ═════════
+
+            if (typeof initCloudSync === "function") {
+
+                initCloudSync();
+
+            }
+
             // ═════════ QR ═════════
 
       
