@@ -19,6 +19,15 @@ function guardarStorage() {
         JSON.stringify(PARTIDAS)
     );
 
+    // Sincronizar con la nube (si esta disponible)
+    if (typeof guardarEnNube === "function") {
+
+        guardarEnNube("info", INFO);
+        guardarEnNube("catalogo", CATALOGO);
+        guardarEnNube("partidas", PARTIDAS);
+
+    }
+
     console.log("Datos guardados");
 }
 
